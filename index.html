@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classic Tetris</title>
+  <link rel="stylesheet" href="css/tetris.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <section class="stat-block header-stat score-header">
+        <h2>Score</h2>
+        <p id="score" class="stat-value">0</p>
+      </section>
+      <div class="title-block">
+        <h1>Tetris</h1>
+        <p class="subtitle">A Classic</p>
+      </div>
+      <section class="stat-block header-stat level-header">
+        <h2>Level</h2>
+        <p id="level" class="stat-value">1</p>
+        <div class="level-progress" aria-hidden="true">
+          <div id="level-progress-fill" class="level-progress-fill"></div>
+        </div>
+      </section>
+    </header>
+
+    <main class="game-layout">
+      <section class="stat-block preview-box hold-box">
+        <h2>Hold</h2>
+        <canvas id="hold-canvas" width="128" height="128"></canvas>
+      </section>
+
+      <div class="playfield-wrap">
+        <canvas id="game-canvas"></canvas>
+        <div id="level-up-popup" class="level-up-popup hidden" aria-live="polite">
+          <span class="level-up-label">Level Up!</span>
+          <span id="level-up-value" class="level-up-value">2</span>
+        </div>
+        <div id="overlay" class="overlay hidden">
+          <div class="overlay-content">
+            <h2 id="overlay-title">Classic Tetris</h2>
+            <p id="overlay-message">Press Enter or click to start</p>
+            <div id="name-entry" class="name-entry hidden">
+              <label for="player-name">Your name</label>
+              <input id="player-name" type="text" maxlength="12" value="Player">
+            </div>
+            <button id="overlay-btn" type="button">Play</button>
+          </div>
+        </div>
+      </div>
+
+      <section class="stat-block preview-box next-box">
+        <h2>Next</h2>
+        <canvas id="next-canvas" width="128" height="128"></canvas>
+        <button id="audio-toggle-btn" type="button" class="audio-toggle-btn" aria-pressed="false">Audio: On</button>
+      </section>
+
+      <section class="stats-row">
+        <section class="stat-block high-scores-block">
+          <div class="high-scores-header">
+            <h2>High Scores</h2>
+            <button id="clear-high-scores-btn" type="button" class="clear-high-scores-btn">Clear</button>
+          </div>
+          <ol id="high-scores-list"></ol>
+        </section>
+      </section>
+    </main>
+
+    <footer class="controls-help">
+      <p>
+        ← → Move &nbsp;|&nbsp; ↑ Rotate CW &nbsp;|&nbsp; Z / Ctrl Rotate CCW &nbsp;|&nbsp;
+        ↓ Soft drop &nbsp;|&nbsp; Space Hard drop &nbsp;|&nbsp; H Hold &nbsp;|&nbsp; P Pause
+      </p>
+      <p class="music-credit">
+        <a href="https://pixabay.com/music/video-games-music-for-puzzle-game-146738/" target="_blank" rel="noopener noreferrer">Music</a>
+      </p>
+    </footer>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
