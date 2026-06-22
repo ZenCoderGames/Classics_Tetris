@@ -45,8 +45,27 @@ async function main() {
     handleOverlayAction();
   });
 
+  function bindRestartButton() {
+    const button = document.getElementById('restart-btn');
+    if (!button) {
+      return;
+    }
+
+    button.addEventListener('click', () => {
+      if (game.state === game.STATES.HIGH_SCORE) {
+        if (!window.confirm('Restart without saving this score?')) {
+          return;
+        }
+      }
+
+      startMusic();
+      game.start();
+    });
+  }
+
   initAudioUi();
   bindAudioToggle();
+  bindRestartButton();
   highScores.bindClearHighScoresButton();
 
   game.showMenu();

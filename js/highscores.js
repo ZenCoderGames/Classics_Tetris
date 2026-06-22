@@ -3,6 +3,13 @@ import { MAX_HIGH_SCORES } from './config.js';
 const STORAGE_KEY = 'classics-tetris-highscores';
 const LAST_PLAYER_NAME_KEY = 'classics-tetris-last-player-name';
 
+function normalizeHighScores(scores) {
+  return scores
+    .filter((entry) => entry && typeof entry.score === 'number')
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_HIGH_SCORES);
+}
+
 export function loadHighScores() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -10,7 +17,19 @@ export function loadHighScores() {
       return [];
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    const normalized = normalizeHighScores(parsed);
+    if (
+      parsed.length !== normalized.length
+      || normalized.some((entry, index) => entry.id !== parsed[index]?.id)
+    ) {
+      saveHighScores(normalized);
+    }
+
+    return normalized;
   } catch {
     return [];
   }
@@ -36,10 +55,11 @@ export function getBestScoreForName(name) {
 }
 
 export function qualifiesForHighScore(score, scores = loadHighScores()) {
-  if (scores.length < MAX_HIGH_SCORES) {
+  const normalized = normalizeHighScores(scores);
+  if (normalized.length < MAX_HIGH_SCORES) {
     return true;
   }
-  const lowest = scores[MAX_HIGH_SCORES - 1]?.score ?? 0;
+  const lowest = normalized[normalized.length - 1]?.score ?? 0;
   return score > lowest;
 }
 
@@ -53,8 +73,7 @@ export function addHighScore(entry) {
     level: entry.level,
     date: entry.date || new Date().toISOString(),
   });
-  scores.sort((a, b) => b.score - a.score);
-  const trimmed = scores.slice(0, MAX_HIGH_SCORES);
+  const trimmed = normalizeHighScores(scores);
   saveHighScores(trimmed);
   return trimmed;
 }
@@ -92,12 +111,12 @@ export function renderHighScores(scores, highlightIndex = -1, newIndex = -1) {
     return;
   }
 
-  scores.forEach((entry, index) => {
+  normalizeHighScores(scores).forEach((entry, index) => {
     const item = document.createElement('li');
     if (index === highlightIndex) {
       item.classList.add('new-entry');
     }
-    item.append(`${entry.name} - ${entry.score.toLocaleString()} `);
+    item.append(`${index + 1}. ${entry.name} - ${entry.score.toLocaleString()} `);
     if (index === newIndex) {
       const newMarker = document.createElement('span');
       newMarker.className = 'new-score-marker';
