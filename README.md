@@ -1,2 +1,3 @@
 # Classics_Tetris
-Starting a series for some of the classical games
+
+Part of a series to recreate some of the classical video games for my kids.
