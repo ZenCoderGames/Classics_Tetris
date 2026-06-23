@@ -238,6 +238,45 @@ export function createRenderer(gameCanvas, holdCanvas, nextCanvas) {
     ctx.restore();
   }
 
+  function drawLockFlash(cells, progress) {
+    if (!cells.length || progress <= 0) {
+      return;
+    }
+
+    const firstVisible = GRID.BUFFER_ROWS;
+    const lastVisible = firstVisible + GRID.VISIBLE_ROWS - 1;
+    const alpha = (1 - progress) * 0.38 + Math.sin(progress * Math.PI) * 0.12;
+    const inset = 3;
+    const outerSize = CELL_PX - inset * 2;
+    const innerInset = inset + 1;
+    const innerSize = CELL_PX - innerInset * 2;
+
+    ctx.save();
+    ctx.lineJoin = 'round';
+
+    for (const { x, y, type } of cells) {
+      if (y < firstVisible || y > lastVisible) {
+        continue;
+      }
+
+      const pos = boardToCanvas(x, y);
+      const color = PIECE_COLORS[type] || '#ffffff';
+      const r = parseInt(color.slice(1, 3), 16);
+      const g = parseInt(color.slice(3, 5), 16);
+      const b = parseInt(color.slice(5, 7), 16);
+
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.5})`;
+      ctx.strokeRect(pos.x + inset, pos.y + inset, outerSize, outerSize);
+
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.8})`;
+      ctx.strokeRect(pos.x + innerInset, pos.y + innerInset, innerSize, innerSize);
+    }
+
+    ctx.restore();
+  }
+
   function drawPreview(context, type, canvasWidth, canvasHeight) {
     context.clearRect(0, 0, canvasWidth, canvasHeight);
     if (!type || !sprites.block) {
@@ -318,6 +357,8 @@ export function createRenderer(gameCanvas, holdCanvas, nextCanvas) {
     scorePopupProgress = 1,
     scorePopupRow = null,
     shakeOffset = { x: 0, y: 0 },
+    lockFlashCells = [],
+    lockFlashProgress = 0,
   }) {
     ctx.clearRect(0, 0, playfieldWidth, playfieldHeight);
     ctx.save();
@@ -326,6 +367,7 @@ export function createRenderer(gameCanvas, holdCanvas, nextCanvas) {
     drawLockedCells(board, clearingRows, clearFlashOn, clearColumns);
     drawDropTrails(dropTrails);
     drawActivePiece(active, ghostY);
+    drawLockFlash(lockFlashCells, lockFlashProgress);
     drawClearLabel(clearLabel, scorePopupText, scorePopupProgress, scorePopupRow);
     ctx.restore();
     drawPreview(holdCtx, hold, holdCanvas.width, holdCanvas.height);

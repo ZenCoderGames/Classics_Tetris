@@ -12,6 +12,7 @@ export const MAX_HIGH_SCORES = 10;
 
 export const TIMING = {
   LOCK_DELAY_MS: 500,
+  LOCK_FLASH_MS: 220,
   MAX_MOVE_RESETS: 15,
   DAS_MS: 167,
   ARR_MS: 33,

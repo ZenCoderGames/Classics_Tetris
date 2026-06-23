@@ -69,6 +69,8 @@ export function createGame(renderer, input, hud, highScores) {
   let scorePopupTimer = 0;
   let scorePopupRow = null;
   let dropTrails = [];
+  let landFlashActive = false;
+  let landFlashTimer = 0;
   let audioContext = null;
   const lastPlayerNameKey = 'classics-tetris-last-player-name';
 
@@ -118,6 +120,7 @@ export function createGame(renderer, input, hud, highScores) {
   let levelUpTimeout = null;
   let levelUpCelebrationActive = false;
   let levelUpCelebrationTimer = 0;
+  let pendingLevelUpLevel = null;
   let timeScale = 1;
   let deferredLineScoring = false;
 
@@ -319,6 +322,27 @@ export function createGame(renderer, input, hud, highScores) {
     });
   }
 
+  function triggerLandFlash() {
+    landFlashActive = true;
+    landFlashTimer = 0;
+  }
+
+  function clearLandFlash() {
+    landFlashActive = false;
+    landFlashTimer = 0;
+  }
+
+  function updateLandFlash(dt) {
+    if (!landFlashActive) {
+      return;
+    }
+
+    landFlashTimer += dt;
+    if (landFlashTimer >= TIMING.LOCK_FLASH_MS) {
+      clearLandFlash();
+    }
+  }
+
   function normalizeBoardCells() {
     for (let y = 0; y < board.cells.length; y += 1) {
       for (let x = 0; x < board.cells[y].length; x += 1) {
@@ -355,8 +379,11 @@ export function createGame(renderer, input, hud, highScores) {
     scorePopupTimer = 0;
     scorePopupRow = null;
     dropTrails = [];
+    landFlashActive = false;
+    landFlashTimer = 0;
     levelUpCelebrationActive = false;
     levelUpCelebrationTimer = 0;
+    pendingLevelUpLevel = null;
     timeScale = 1;
     deferredLineScoring = false;
   }
@@ -475,6 +502,7 @@ export function createGame(renderer, input, hud, highScores) {
       }
     }
     normalizeBoardCells();
+    clearLandFlash();
 
     const completed = findCompletedLines(board);
     const cleared = completed.length;
@@ -484,7 +512,7 @@ export function createGame(renderer, input, hud, highScores) {
       const leveledUp = applyLineCount(scoreState, cleared, LINES_PER_LEVEL);
       if (leveledUp) {
         setLevelGravity(gravity, scoreState.level);
-        showLevelUpCelebration(scoreState.level);
+        pendingLevelUpLevel = scoreState.level;
       }
       startLineClear(completed, points, perLineScores, deferScore);
     } else if (tSpinResult.isTSpin) {
@@ -513,6 +541,7 @@ export function createGame(renderer, input, hud, highScores) {
 
   function startLineClear(rows, points, perLineScores = null, deferScore = false) {
     state = STATES.LINE_CLEAR;
+    clearLandFlash();
     pieces.active = null;
     lineClearQueue = [...rows].sort((a, b) => b - a);
     lineClearScoreQueue = perLineScores?.length ? [...perLineScores] : splitPointsAcrossRows(points, rows.length);
@@ -702,7 +731,21 @@ export function createGame(renderer, input, hud, highScores) {
       return;
     }
 
+    if (pendingLevelUpLevel !== null) {
+      showLevelUpCelebration(pendingLevelUpLevel);
+      pendingLevelUpLevel = null;
+      return;
+    }
+
+    if (levelUpCelebrationActive) {
+      return;
+    }
+
     spawnNextPiece();
+  }
+
+  function updateLockFlash(dt) {
+    updateLandFlash(dt);
   }
 
   function updateScorePopup(dt) {
@@ -883,23 +926,27 @@ export function createGame(renderer, input, hud, highScores) {
     }
 
     if (state === STATES.PAUSED) {
+      updateLockFlash(dt);
       render();
       return;
     }
 
     if (state === STATES.PLAYING) {
       updateScorePopup(getScaledDt(dt));
+      updateLockFlash(getScaledDt(dt));
     }
 
     if (state === STATES.LINE_CLEAR) {
       if (updateLevelUpCelebration(dt)) {
         updateDropTrails(getScaledDt(dt));
         updateScorePopup(getScaledDt(dt));
+        updateLockFlash(getScaledDt(dt));
         render();
         return;
       }
 
       updateDropTrails(getScaledDt(dt));
+      updateLockFlash(getScaledDt(dt));
       updateLineClear(getScaledDt(dt));
       render();
       return;
@@ -909,11 +956,13 @@ export function createGame(renderer, input, hud, highScores) {
       if (updateLevelUpCelebration(dt)) {
         updateDropTrails(getScaledDt(dt));
         updateScorePopup(getScaledDt(dt));
+        updateLockFlash(getScaledDt(dt));
         render();
         return;
       }
 
       updateDropTrails(getScaledDt(dt));
+      updateLockFlash(getScaledDt(dt));
       updateCollapse(getScaledDt(dt));
       render();
       return;
@@ -925,6 +974,8 @@ export function createGame(renderer, input, hud, highScores) {
 
     updateDropTrails(getScaledDt(dt));
     processInput(pressed);
+
+    const wasLocking = gravity.locking;
 
     updateDas(gravity, getScaledDt(dt), input.isHeld('left') ? -1 : input.isHeld('right') ? 1 : 0, (dir) => {
       if (tryMove(dir, 0)) {
@@ -941,6 +992,12 @@ export function createGame(renderer, input, hud, highScores) {
         }
       }
     }, isOnGround);
+
+    if (gravity.locking && !wasLocking && pieces.active) {
+      triggerLandFlash();
+    } else if (!gravity.locking && wasLocking) {
+      clearLandFlash();
+    }
 
     if (shouldLock(gravity)) {
       lockActivePiece();
@@ -960,6 +1017,12 @@ export function createGame(renderer, input, hud, highScores) {
     const scorePopupProgress = scorePopupText
       ? Math.min(1, scorePopupTimer / TIMING.SCORE_POPUP_MS)
       : 1;
+    const landFlashProgress = landFlashActive && pieces.active
+      ? Math.min(1, landFlashTimer / TIMING.LOCK_FLASH_MS)
+      : 0;
+    const landFlashCells = landFlashActive && pieces.active
+      ? activeCells().map(({ x, y }) => ({ x, y, type: pieces.active.type }))
+      : [];
 
     renderer.renderFrame({
       board,
@@ -976,6 +1039,8 @@ export function createGame(renderer, input, hud, highScores) {
       scorePopupProgress,
       scorePopupRow,
       shakeOffset,
+      lockFlashCells: landFlashCells,
+      lockFlashProgress: landFlashProgress,
     });
   }
 

@@ -116,7 +116,7 @@ export function renderHighScores(scores, highlightIndex = -1, newIndex = -1) {
     if (index === highlightIndex) {
       item.classList.add('new-entry');
     }
-    item.append(`${index + 1}. ${entry.name} - ${entry.score.toLocaleString()} `);
+    item.append(`${entry.name} - ${entry.score.toLocaleString()} `);
     if (index === newIndex) {
       const newMarker = document.createElement('span');
       newMarker.className = 'new-score-marker';
